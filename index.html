@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebXR Ground Detection</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.161.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.161.0/examples/jsm/",
+          "GLTFLoader": "https://unpkg.com/three@0.161.0/examples/jsm/loaders/GLTFLoader.js"
+        }
+      }
+    </script>
+    <style>
+      body {
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+      }
+      .CC{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      #canvas {
+        width: 100vw;
+        height: 100vh;
+      }
+      #controls {
+        position: absolute;
+        width: 100%;
+        height: 40px;
+        bottom: 0;
+        padding: 10px;
+        background-color: rgba(0, 0, 0, 0.5);
+        gap: 10px;
+        z-index: 999;
+      }
+      .control {
+        padding: 8px;
+        border: none;
+        border-radius: 4px;
+        background-color: black;
+        color: white;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body class="CC">
+    <canvas id="canvas"></canvas>
+    <div id="controls" class="CC">
+      <button class="control CC" id="S">START</button>
+      <button class="control CC" id="C">CLEAR</button>
+      <button class="control CC" id="X">Mode : SHAPE</button>
+    </div>
+    <script src="script.js" type="module"></script>
+  </body>
+</html>
