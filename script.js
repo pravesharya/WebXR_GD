@@ -1,15 +1,21 @@
 import * as THREE from "three";
 import { GLTFLoader } from "GLTFLoader";
 
+console.log("Device Name:", navigator.userAgent);
+const isMetaQuest3 =
+  navigator.userAgent.includes("OculusBrowser") &&
+  navigator.userAgent.includes("Quest 3");
+console.log("Is Meta Quest 3:", isMetaQuest3);
+
 let width = window.innerWidth;
 let height = window.innerHeight;
 
 const canvas = document.querySelector("#canvas");
-const btnS = document.querySelector("#S");
-const btnC = document.querySelector("#C");
-const btnX = document.querySelector("#X");
+const btnS = document.querySelector("#S"); // start
+const btnC = document.querySelector("#C"); // clear
+const btnM = document.querySelector("#M"); // mode
 btnC.style.display = "none";
-btnX.style.display = "none";
+btnM.style.display = "none";
 
 let session, sessionActive, webXrSupported;
 sessionActive = webXrSupported = false;
@@ -20,11 +26,25 @@ let reticle, reticleG, reticleM, controller;
 let shapes, size, mesh, meshG, meshM, randomIndex;
 size = 1;
 
-let gltfLoader, modelPath, isModel, model, modelSize;
+let gltfLoader, modelPath, isModel, model, modelSize, modelReady;
 gltfLoader = new GLTFLoader();
 modelPath = "./assets/duck/scene.gltf"; // default Model
-isModel = false;
+isModel = modelReady = false;
 modelSize = 0.025;
+
+async function loadModel() {
+  try {
+    const gltf = await gltfLoader.loadAsync(modelPath);
+    model = gltf.scene;
+    model.scale.set(modelSize, modelSize, modelSize);
+    model.castShadow = true;
+    modelReady = true; // Set the flag to true once loaded
+    console.log("Model loaded successfully");
+  } catch (error) {
+    console.error("Error loading model:", error);
+    // Handle the error appropriately, e.g., display an error message
+  }
+}
 
 async function setupScene() {
   console.log(navigator.xr, navigator.xr.isSessionSupported);
@@ -58,7 +78,7 @@ setupScene();
 
 async function startSession() {
   btnC.style.display = "block";
-  btnX.style.display = "block";
+  btnM.style.display = "block";
 
   sessionActive = true;
   session = await navigator.xr.requestSession("immersive-ar", {
@@ -74,20 +94,16 @@ async function startSession() {
 
   const referenceSpace = await session.requestReferenceSpace("local");
   const viewerSpace = await session.requestReferenceSpace("viewer");
-  const hitTestSource = await session.requestHitTestSource({
-    space: viewerSpace,
-  });
 
-  reticleG = new THREE.RingGeometry(0.5, 1, 32).rotateX(-Math.PI / 2);
+  const hitTestSource = isMetaQuest3
+    ? await session.requestHitTestSource({ space: referenceSpace })
+    : await session.requestHitTestSource({ space: viewerSpace });
+
+  reticleG = new THREE.RingGeometry(0.9, 1, 32).rotateX(-Math.PI / 2);
   reticleM = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
   reticle = new THREE.Mesh(reticleG, reticleM);
   reticle.visible = reticle.matrixAutoUpdate = false;
   scene.add(reticle);
-
-  // const gltf = await gltfLoader.loadAsync(modelPath);
-  // model = gltf.scene;
-  // model.scale.set(modelSize, modelSize, modelSize);
-  // model.castShadow = true;
 
   shapes = [
     new THREE.SphereGeometry(size, 32, 32),
@@ -97,16 +113,14 @@ async function startSession() {
     new THREE.TorusGeometry(size, size / 4, 16, 100),
   ];
 
+  await loadModel();
+
   controller.addEventListener("select", async () => {
     if (reticle.visible) {
-      if (isModel) {
-        const gltf = await gltfLoader.loadAsync(modelPath);
-        model = gltf.scene;
-        model.scale.set(modelSize, modelSize, modelSize);
-        model.position.setFromMatrixPosition(reticle.matrix);
-        model.castShadow = true;
-        console.log(model);
-        scene.add(model);
+      if (isModel && modelReady) {
+        const clonedModel = model.clone(); // Clone the loaded model
+        clonedModel.position.setFromMatrixPosition(reticle.matrix);
+        scene.add(clonedModel);
       } else {
         randomIndex = getRandomNumber(0, 4);
         console.log(randomIndex);
@@ -149,6 +163,8 @@ async function endSession() {
 btnS.addEventListener("click", () => {
   if (sessionActive) {
     btnS.textContent = "START";
+    btnC.style.display = "none";
+    btnM.style.display = "none";
     endSession();
   } else {
     btnS.textContent = "END";
@@ -164,10 +180,10 @@ btnC.addEventListener("click", () => {
   }
 });
 
-btnX.addEventListener("click", () => {
-  console.log("MODE Change");
+btnM.addEventListener("click", () => {
   isModel = !isModel;
-  btnX.textContent = isModel ? "Mode : MODEL" : "Mode : SHAPE";
+  console.log("isModel : ", isModel);
+  btnM.textContent = isModel ? "Mode : MODEL" : "Mode : SHAPE";
 });
 
 function getRandomNumber(min, max) {
